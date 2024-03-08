@@ -6,7 +6,7 @@ from PySide6 import *
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication, QPushButton, QTableWidget, QTableWidgetItem, QMainWindow, QVBoxLayout, QPushButton, QWidget, QLabel, QHBoxLayout
 from PySide6.QtGui import QPalette, QColor
-#prints a word for button
+##login information for mysql
 testdb = mysql.connector.connect(
     host = "127.0.0.1",
     user = "testguy",
@@ -15,15 +15,15 @@ testdb = mysql.connector.connect(
 )
 mycursor = testdb.cursor()
 
-# Stuff for table
+# establishes inventory table
 cur_invn = [(0,"Walnuts",5.00)]
 
 @Slot()
-
+#clears and updates table with latest information
 def refr_table():
     #Clears array and reads up to date info from sql table
     cur_invn.clear()
-    shw = "SELECT * FROM inv_placeholder"
+    shw = "SELECT * FROM donotinterfere_inv_placeholder"
     mycursor.execute(shw)
     myresult = mycursor.fetchall()
     for x in range(0,len(myresult)):
@@ -40,31 +40,27 @@ def refr_table():
         table.setRowCount(len(cur_invn))
         table.setColumnCount(len(cur_invn[0]))
 
-#testdb will only run once, so make sure to add it after any mysql changes
+#testdb.commmit will only run once, so make sure to add it after any mysql changes
+        #currently placeholder function that adds a entry to the mysql database with info from val and refreshes table
 def say_b():
-    sql = "INSERT INTO inv_placeholder  VALUES (%s, %s, %s)"
+    sql = "INSERT INTO donotinterfere_inv_placeholder  VALUES (%s, %s, %s)"
     val = (0, "Pizza", 15.00)
     mycursor.execute(sql, val)
     myresult = mycursor.fetchall()
-#Seperates results into an array
     refr_table()
     print(cur_invn)
 
+    testdb.commit()
+
+#placeholder function that changes the price of all items of a certain type and refreshes
 def say_w():
-    sql = "INSERT INTO inv_placeholder VALUES (%s, %s, %s)"
-    val = (0, "Burger", 8.06)
-    mycursor.execute(sql, val)
+    sql = "UPDATE donotinterfere_inv_placeholder set price = '6.00' WHERE item_name = 'pizza'"
+    mycursor.execute(sql)
     myresult = mycursor.fetchall()
-#Seperates results into an array
     refr_table()
     print(cur_invn)
 
-    #fetchall to get row 
-    #see column name to add each item into array
-
-
-        
-
+    testdb.commit()
 
 
 
@@ -82,17 +78,16 @@ for i, (pk, item_desc, price) in enumerate(cur_invn):
     sql = "INSERT INTO inv_placeholder VALUES (%s, %s, %s)"
     val = (0, cur_invn[i][0], cur_invn[i][1] )
 
-
-
-#Read and print mysql table into array
-#refresh array when changes made
-
 #Code for button object (debug)
     
 button1 = QPushButton("Bees")
+# say_b function
 button2 = QPushButton("Wasps")
+# say_w function
 button3 = QPushButton("Refresh")
-#Button 1 functionality
+# refr_table function
+
+#ties button function to button press
 button1.pressed.connect(say_b)
 button2.pressed.connect(say_w)
 button3.pressed.connect(refr_table)
@@ -124,10 +119,10 @@ class inv_main(QMainWindow):
 
 testdb.commit()
 
+#Debug to check accuracy of python table
 print(cur_invn)
 
 #draws the table and executes app
 main = inv_main()
 main.show()
-
 sys.exit(app.exec())
