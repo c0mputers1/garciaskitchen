@@ -5,8 +5,6 @@ import mysql.connector
 from PySide6 import *
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication, QPushButton, QTableWidget, QTableWidgetItem, QMainWindow, QVBoxLayout, QPushButton, QWidget, QLabel, QHBoxLayout, QTabWidget, QCheckBox
-from PySide6.QtGui import QPalette, QColor
-from functools import partial
 ##login information for mysql
 testdb = mysql.connector.connect(
     host = "127.0.0.1",
@@ -72,9 +70,9 @@ def say_w():
     print(cur_invn)
     testdb.commit()
 
-def search():
+def search(attribute, type):
     if Query.isChecked():
-        src = " WHERE Type = 'drink'"
+        src = " WHERE " + str(attribute) + " = '" + str(type) +"'"
         refr_table(src_param = src)
         print(cur_invn)
         print(src)
@@ -114,7 +112,7 @@ Query = QCheckBox("Bones Hurt?")
 QuWidget = QWidget()
 
 
-Query.toggled.connect(search)
+Query.toggled.connect(lambda: search("Type", "drink"))
 
 #ties button function to button press
 button1.pressed.connect(say_b)
