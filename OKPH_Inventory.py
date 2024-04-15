@@ -1,10 +1,10 @@
 import sys
 import random
 import mysql.connector
-# You need to import every new function you use btw
+
 from PySide6 import *
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QApplication, QPushButton, QTableWidget, QTableWidgetItem, QMainWindow, QVBoxLayout, QPushButton, QWidget, QLabel, QHBoxLayout, QTabWidget, QCheckBox
+from PySide6.QtWidgets import QApplication, QPushButton, QTableWidget, QTableWidgetItem, QMainWindow, QVBoxLayout, QPushButton, QWidget, QHBoxLayout, QTabWidget, QCheckBox, QComboBox, QTextEdit
 ##login information for mysql
 testdb = mysql.connector.connect(
     host = "127.0.0.1",
@@ -16,6 +16,7 @@ mycursor = testdb.cursor()
 
 # establishes inventory table
 cur_invn = [(0,"Walnuts",5.00, 5, "grain")]
+amnt_enbl = False
 #establishes variable for inventory
 
 @Slot()
@@ -46,10 +47,13 @@ def refr_table(**kwargs):
         table.setItem(i, 4, item_type)
         table.setRowCount(len(cur_invn))
         table.setColumnCount(len(cur_invn[0]))
+
     print(shw)
+    print(str(Attr_Box.currentText()))
+    print(str(Type_Box.currentText()))
 
 
-
+#hey btw anyone from MIT, its me matthew r, just wanted to say I wrote like all of this program myself, as neither of my group memebers helped with any actual issues, that is why it is in such a sorry state
 #testdb.commmit will only run once, so make sure to add it after any mysql changes
         #currently placeholder function that adds a entry to the mysql database with info from val and refreshes table
 def say_b():
@@ -65,27 +69,26 @@ def say_b():
 def say_w():
     upd = "UPDATE donotinterfere_inv_placeholder set price = '6.00' WHERE item_name = 'pizza'"
     mycursor.execute(upd)
-    myresult = mycursor.fetchall()
     refr_table()
     print(cur_invn)
     testdb.commit()
 
-def search(attribute, type):
+def search(attribute, type, amount):
     if Query.isChecked():
-        src = " WHERE " + str(attribute) + " = '" + str(type) +"'"
+        if attribute == "Type":
+            src = " WHERE " + str(attribute) + " = '" + str(type) + "'"
+        elif attribute == "Amount":
+            src = " WHERE Amount >= '" + amount + "'"
         refr_table(src_param = src)
-        print(cur_invn)
-        print(src)
         testdb.commit()
     else:
         refr_table()
 
 
-
 #begins system
 app=QApplication(sys.argv)   
 
-        #establishes table and row length
+#establishes table and row length
 table = QTableWidget()
 table.setRowCount(len(cur_invn))
 table.setColumnCount(len(cur_invn[0]))
@@ -107,17 +110,25 @@ button3 = QPushButton("Refresh")
 # refr_table function
 
 #Establishes query page
-Query = QCheckBox("Bones Hurt?")
+Query = QCheckBox("Search for Selected Categories?")
+
+Attr_Box = QComboBox()
+Type_Box = QComboBox()
+Amnt_Box = QTextEdit()
+
+
+Attr_Box.addItem("Type")
+Attr_Box.addItem("Amount")
+
 #Base for Widget page
 QuWidget = QWidget()
 
-
-Query.toggled.connect(lambda: search("Type", "drink"))
-
 #ties button function to button press
 button1.pressed.connect(say_b)
-button2.pressed.connect(search)
+button2.pressed.connect(say_w)
 button3.pressed.connect(refr_table)
+
+h = 0
 
 #establishes the main window
 class inv_main(QMainWindow):
@@ -144,7 +155,12 @@ class inv_main(QMainWindow):
 #Layout for Query page
         Q_Layout = QVBoxLayout()
         Q_Layout.addWidget(Query)
+        Q_Layout.addWidget(Attr_Box)
+        Q_Layout.addWidget(Type_Box)
+        Q_Layout.addWidget(Amnt_Box)
         QuWidget.setLayout(Q_Layout)
+
+
 #Establishes tab widget, to which all other widgets are applied to
         Base = QTabWidget()
 
@@ -153,6 +169,18 @@ class inv_main(QMainWindow):
         Base.setCurrentWidget(Mwidget)
 
         self.setCentralWidget(Base)
+
+
+
+    if str(Attr_Box.currentText()) == "Type":
+        Type_Box.clear()
+        Type_Box.addItem("food")
+        Type_Box.addItem("drink")
+
+
+#Ties search function to Query toggle
+    Query.toggled.connect(lambda : search(Attr_Box.currentText(), Type_Box.currentText(), Amnt_Box.toPlainText()))
+
 
 #Debug to check accuracy of python table
 print(cur_invn)
