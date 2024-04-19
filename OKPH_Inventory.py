@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication, QPushButton, QTableWidget, QTableWid
 testdb = mysql.connector.connect(
     host = "127.0.0.1",
     user = "testguy",
-    password = "FiveFred3",
+    password = "TestPassword123",
     database = "schema_b"
 )
 mycursor = testdb.cursor()
