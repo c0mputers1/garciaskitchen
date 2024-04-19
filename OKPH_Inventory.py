@@ -4,7 +4,7 @@ import mysql.connector
 
 from PySide6 import *
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QApplication, QPushButton, QTableWidget, QTableWidgetItem, QMainWindow, QVBoxLayout, QPushButton, QWidget, QHBoxLayout, QTabWidget, QCheckBox, QComboBox, QTextEdit
+from PySide6.QtWidgets import QApplication, QPushButton, QTableWidget, QTableWidgetItem, QMainWindow, QVBoxLayout, QPushButton, QLabel, QWidget, QHBoxLayout, QTabWidget, QCheckBox, QComboBox, QTextEdit
 ##login information for mysql
 testdb = mysql.connector.connect(
     host = "127.0.0.1",
@@ -14,10 +14,8 @@ testdb = mysql.connector.connect(
 )
 mycursor = testdb.cursor()
 
-# establishes inventory table
+# establishes inventory table where info will be stored
 cur_invn = [(0,"Walnuts",5.00, 5, "grain")]
-amnt_enbl = False
-#establishes variable for inventory
 
 @Slot()
 
@@ -53,22 +51,30 @@ def refr_table(**kwargs):
     print(str(Type_Box.currentText()))
 
 
-#hey btw anyone from MIT, its me matthew r, just wanted to say I wrote like all of this program myself, as neither of my group memebers helped with any actual issues, that is why it is in such a sorry state
+
 #testdb.commmit will only run once, so make sure to add it after any mysql changes
         #currently placeholder function that adds a entry to the mysql database with info from val and refreshes table
-def say_b():
-    add = "INSERT INTO donotinterfere_inv_placeholder  VALUES (%s, %s, %s, %s, %s)"
-    val = (0, "Pepsi", 5.00, 3, "drink")
-    mycursor.execute(add, val)
+def say_b(item_name):
+    #Check for value initially
+    mycursor.execute("SELECT * FROM donotinterfere_inv_placeholder WHERE item_name = '" + item_name + "'")
     myresult = mycursor.fetchall()
+    #Only runs if given item already is in the inventory
+    if str(myresult) != "[]":
+        print("This item exists!")
+        mycursor.execute("SELECT amount FROM donotinterfere_inv_placeholder WHERE item_name = '" + item_name + "'")
+        res_amnt = mycursor.fetchall()
+        print(res_amnt)
+        upd = "UPDATE donotinterfere_inv_placeholder SET amount = amount + '1' WHERE item_name = '" + item_name + "'"
+        mycursor.execute(upd)
     refr_table()
-    print(cur_invn)
+    print(myresult)
     testdb.commit()
 
-#placeholder function that changes the price of all items of a certain type and refreshes
-def say_w():
-    upd = "UPDATE donotinterfere_inv_placeholder set price = '6.00' WHERE item_name = 'pizza'"
-    mycursor.execute(upd)
+#Used to add new entries with new values to inventory
+def say_w(item_desc, price, amount, type):
+    add = "INSERT INTO donotinterfere_inv_placeholder VALUES (%s, %s, %s, %s, %s)"
+    val = (0, item_desc, float(price), int(amount), type)
+    mycursor.execute(add, val)
     refr_table()
     print(cur_invn)
     testdb.commit()
@@ -102,12 +108,14 @@ for i, (pk, item_desc, price, amount, type) in enumerate(cur_invn):
 
 #Code for button object (debug)
     
-button1 = QPushButton("Add")
+add_btn = QPushButton("Add")
 # say_b function
-button2 = QPushButton("Test")
-# say_w function
-button3 = QPushButton("Refresh")
+item_box = QComboBox()
+#Displays all items from inventory
+refr_btn = QPushButton("Refresh")
 # refr_table function
+
+item_box.addItems(("Pizza","Pepsi","Burger","Coke"))
 
 #Establishes query page
 Query = QCheckBox("Search for Selected Categories?")
@@ -123,12 +131,24 @@ Attr_Box.addItem("Amount")
 #Base for Widget page
 QuWidget = QWidget()
 
-#ties button function to button press
-button1.pressed.connect(say_b)
-button2.pressed.connect(say_w)
-button3.pressed.connect(refr_table)
+Query.toggled.connect(lambda : search(Attr_Box.currentText(), Type_Box.currentText(), Amnt_Box.toPlainText()))
 
-h = 0
+#ties button function to button press
+add_btn.pressed.connect(lambda : say_b(item_box.currentText()))
+refr_btn.pressed.connect(refr_table)
+
+#Establishes base widget for item creation page
+AddWidget = QWidget()
+Add_Instruct = QLabel("Inlcude the information formatted as (0, name of the item, price of the item, amount of the item, category of item)")
+Add_Assistance = QLabel("See ReadMe for detailed instructions!")
+Add_Submit = QPushButton("Add this item")
+Add_Name = QTextEdit()
+Add_Price = QTextEdit()
+Add_Amnt = QTextEdit()
+Add_Type = QTextEdit()
+
+
+Add_Submit.pressed.connect(lambda : say_w(Add_Name.toPlainText(),Add_Price.toPlainText(), Add_Amnt.toPlainText(), Add_Type.toPlainText()) )
 
 #establishes the main window
 class inv_main(QMainWindow):
@@ -140,18 +160,19 @@ class inv_main(QMainWindow):
         layout1 = QHBoxLayout()
 
 #Bottom row of buttons
-        layout1.addWidget(button1)
-        layout1.addWidget(button2)
+        layout1.addWidget(add_btn)
+        layout1.addWidget(item_box)
 
 #Layers all widgets from top to bottom
 #        layout.addWidget(QLabel(str)))
         layout.addWidget(table)
-        layout.addWidget(button3)
+        layout.addWidget(refr_btn)
         layout.addLayout(layout1)
         
 #Widget for the main Page
         Mwidget = QWidget()
         Mwidget.setLayout(layout)
+
 #Layout for Query page
         Q_Layout = QVBoxLayout()
         Q_Layout.addWidget(Query)
@@ -160,12 +181,25 @@ class inv_main(QMainWindow):
         Q_Layout.addWidget(Amnt_Box)
         QuWidget.setLayout(Q_Layout)
 
+#Layout for adding page
+        A_Layout = QVBoxLayout()
+        A_Layout.addWidget(Add_Instruct)
+        A_Layout.addWidget(Add_Name)
+        A_Layout.addWidget(Add_Price)
+        A_Layout.addWidget(Add_Amnt)
+        A_Layout.addWidget(Add_Type)
+        A_Layout.addWidget(Add_Submit)
+        A_Layout.addWidget(Add_Assistance)
+        AddWidget.setLayout(A_Layout)
+
+
 
 #Establishes tab widget, to which all other widgets are applied to
         Base = QTabWidget()
 
         Base.addTab(Mwidget, "&Main")
         Base.addTab(QuWidget, "&Search")
+        Base.addTab(AddWidget, "&Add Items")
         Base.setCurrentWidget(Mwidget)
 
         self.setCentralWidget(Base)
