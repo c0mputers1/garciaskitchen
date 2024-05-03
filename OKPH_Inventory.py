@@ -15,6 +15,8 @@ testdb = mysql.connector.connect(
 )
 mycursor = testdb.cursor()
 
+#Home/Work dropdown box
+
 # establishes inventory table where info will be stored
 cur_invn = [(0,"Walnuts",5.00, 5, "grain")]
 
@@ -26,7 +28,7 @@ def refr_table(**kwargs):
     #Clears array and reads up to date info from sql table
     cur_invn.clear()
     src_param = kwargs.get('src_param', "")
-    shw = "SELECT * FROM donotinterfere_inv_placeholder" + src_param
+    shw = "SELECT * FROM Gk_inventory" + src_param
     mycursor.execute(shw)
     myresult = mycursor.fetchall()
     for x in range(0,len(myresult)):
@@ -48,7 +50,8 @@ def refr_table(**kwargs):
         table.setColumnCount(len(cur_invn[0]))
 
 #Pulls all items from table and adds them to the drop down menu 
-    mycursor.execute("SELECT item_name FROM donotinterfere_inv_placeholder;")
+    item_box.clear()
+    mycursor.execute("SELECT item_name FROM Gk_inventory")
     names = mycursor.fetchall()
     print(mycursor.fetchall())
     print(names)
@@ -60,58 +63,75 @@ def refr_table(**kwargs):
         b = f.replace(",","")
         q = b.replace("'","")
         item_box.addItem(q)
-        print(names[y])
+        print(q)
+        #print(names[y])
 
-#Checks all categories
-
-    mycursor.execute("SELECT type FROM donotinterfere_inv_placeholder;")
-    amnt = mycursor.fetchall()
-    add = False
-    print(mycursor.fetchall())
-    print("this is item box stuff")
-    for n in range(len(amnt)):
-        n = (str(amnt[n])).replace("(","")
+#Checks all categories, clers table, then adds them
+#this table stores all unique categories
+    Type_Box.clear()
+    mycursor.execute("SELECT type FROM Gk_inventory;")
+    types = mycursor.fetchall()
+    types = list( dict.fromkeys(types))
+    print(types)
+    print("this is TYPE box stuff")
+    for n in range(len(types)):
+        n = (str(types[n])).replace("(","")
         f = n.replace(")","")
         b = f.replace(",","")
         q = b.replace("'","")
+        print(q)
+        #print(types[n])
         Type_Box.addItem(q)
-        print(names[y])
 
-    for m in range(Type_Box.count()):
-        all_itm = Type_Box.itemText(m)
-        print(all_itm)
     print(shw)
-    print(str(Attr_Box.currentText()))
-    print(str(Type_Box.currentText()))
+    #print(str(Attr_Box.currentText()))
+    #print(str(Type_Box.currentText()))
 
 
 
 #testdb.commmit will only run once, so make sure to add it after any mysql changes
-        #currently placeholder function that adds a entry to the mysql database with info from val and refreshes table
+        #Code that takes given values and searches for an item to add or subtract a given amount
 def say_b(item_name, posneg, value):
     #Check for value initially
-    mycursor.execute("SELECT * FROM donotinterfere_inv_placeholder WHERE item_name = '" + item_name + "'")
+    mycursor.execute("SELECT * FROM Gk_inventory WHERE item_name = '" + item_name + "'")
     myresult = mycursor.fetchall()
     #Only runs if given item already is in the inventory
     if str(myresult) != "[]":
         print("This item exists!")
-        mycursor.execute("SELECT amount FROM donotinterfere_inv_placeholder WHERE item_name = '" + item_name + "'")
+        mycursor.execute("SELECT amount FROM Gk_inventory WHERE item_name = '" + item_name + "'")
         res_amnt = mycursor.fetchall()
-        print(res_amnt)
-        upd = "UPDATE donotinterfere_inv_placeholder SET amount = amount " + str(posneg) + " '" + str(value) + "'" + " WHERE item_name = '" + item_name + "'"
-        mycursor.execute(upd)
+        #Converts current amount to string to remove from
+        am1 = str(res_amnt[0]).replace(")","")
+        am2 = am1.replace("(","")
+        am3 = am2.replace(",","")
+        print(res_amnt[0])
+        print(am3)
+        if (int(am3) - int(value)) >= 0:
+            upd = "UPDATE Gk_inventory SET amount = amount " + str(posneg) + " '" + str(value) + "'" + " WHERE item_name = '" + item_name + "'"
+            mycursor.execute(upd)
+        else: 
+            print("Negative Amount value!")
     refr_table()
     print(myresult)
     testdb.commit()
 
 #Used to add new entries with new values to inventory
 def say_w(item_desc, price, amount, type):
-    add = "INSERT INTO donotinterfere_inv_placeholder VALUES (%s, %s, %s, %s, %s)"
+    add = "INSERT INTO Gk_inventory VALUES (%s, %s, %s, %s, %s)"
     val = (0, item_desc, float(price), int(amount), type)
     mycursor.execute(add, val)
     refr_table()
     print(cur_invn)
     testdb.commit()
+
+def s_box_check():
+    print("s_box_check works")
+    if str(Attr_Box.currentText()) == "Type":
+        Amnt_Box.setDisabled(True)
+        Type_Box.setEnabled(True)
+    elif str(Attr_Box.currentText()) == "Amount":
+        Type_Box.setDisabled(True)
+        Amnt_Box.setEnabled(True)
 
 def search(attribute, type, amount):
     if Query.isChecked():
@@ -125,7 +145,8 @@ def search(attribute, type, amount):
         refr_table()
 
 #begins system
-app=QApplication(sys.argv)   
+app=QApplication(sys.argv)  
+
 
 #establishes table and row length
 table = QTableWidget()
@@ -136,9 +157,6 @@ table.setSizePolicy(
         QSizePolicy.Policy.MinimumExpanding,
         QSizePolicy.Policy.MinimumExpanding
     )
-
-#gets each row and adds info to mysql
-#check why there is no code to execute this later
 
 #Code for button object (debug)
     
@@ -181,13 +199,18 @@ Attr_Box.addItem("Amount")
 #Base for Widget page
 QuWidget = QWidget()
 
+Attr_Box.activated.connect(s_box_check)
+
 Query.toggled.connect(lambda : search(Attr_Box.currentText(), Type_Box.currentText(), Amnt_Box.displayText()))
 
 
 
 #Establishes base widget for item creation page
 AddWidget = QWidget()
-Add_Instruct = QLabel("Inlcude the information formatted as (0, name of the item, price of the item, amount of the item, category of item)")
+Add_Instruct0 = QLabel("Add new item name below")
+Add_Instruct1 = QLabel("Add price per unit below")
+Add_Instruct2 = QLabel("Add current amount below")
+Add_Instruct3 = QLabel("Add item type below")
 Add_Assistance = QLabel("See ReadMe for detailed instructions!")
 Add_Submit = QPushButton("Add this item")
 Add_Name = QLineEdit()
@@ -203,6 +226,9 @@ Add_Submit.pressed.connect(lambda : say_w(Add_Name.displayText(),Add_Price.displ
 class inv_main(QMainWindow):
     def __init__(self):
         super(inv_main,self).__init__()
+
+        self.setWindowTitle("Inviti") 
+        self.setIcon("Inviti_icon.ico")
 
         #sets layout
         layout = QVBoxLayout()
@@ -234,10 +260,13 @@ class inv_main(QMainWindow):
 
 #Layout for adding page
         A_Layout = QVBoxLayout()
-        A_Layout.addWidget(Add_Instruct)
+        A_Layout.addWidget(Add_Instruct0)
         A_Layout.addWidget(Add_Name)
+        A_Layout.addWidget(Add_Instruct1)        
         A_Layout.addWidget(Add_Price)
+        A_Layout.addWidget(Add_Instruct2)        
         A_Layout.addWidget(Add_Amnt)
+        A_Layout.addWidget(Add_Instruct3)        
         A_Layout.addWidget(Add_Type)
         A_Layout.addWidget(Add_Submit)
         A_Layout.addWidget(Add_Assistance)
@@ -256,14 +285,8 @@ class inv_main(QMainWindow):
         self.setCentralWidget(Base)
 
 
-
-    if str(Attr_Box.currentText()) == "Type":
-        Type_Box.clear()
-        Type_Box.addItem("food")
-        Type_Box.addItem("drink")
-
 #Ties search function to Query toggle
-    Query.toggled.connect(lambda : search(Attr_Box.currentText(), Type_Box.currentText(), Amnt_Box.displayText()))
+
 
 
    
@@ -273,6 +296,7 @@ print(cur_invn)
 print(valu_box.sizeHint)
 
 #draws the table and executes app
+refr_table()
 main = inv_main()
 main.show()
 testdb.commit()
