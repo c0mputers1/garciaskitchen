@@ -1,5 +1,4 @@
 import sys
-import random
 import mysql.connector
 
 from PySide6 import *
@@ -33,7 +32,7 @@ def refr_table(**kwargs):
     myresult = mycursor.fetchall()
     for x in range(0,len(myresult)):
         cur_invn.append(myresult[x])
-    print(cur_invn)
+
     #Distributes the information from cur_invn array into the table
     for i, (pk, item_desc, price, amount, type) in enumerate(cur_invn):
         key = QTableWidgetItem(str(pk))
@@ -53,9 +52,6 @@ def refr_table(**kwargs):
     item_box.clear()
     mycursor.execute("SELECT item_name FROM Gk_inventory")
     names = mycursor.fetchall()
-    print(mycursor.fetchall())
-    print(names)
-    print("this is item box stuff")
     for y in range(len(names)):
         #filters out all unnecessary characters
         n = (str(names[y])).replace("(","")
@@ -63,8 +59,6 @@ def refr_table(**kwargs):
         b = f.replace(",","")
         q = b.replace("'","")
         item_box.addItem(q)
-        print(q)
-        #print(names[y])
 
 #Checks all categories, clers table, then adds them
 #this table stores all unique categories
@@ -72,20 +66,19 @@ def refr_table(**kwargs):
     mycursor.execute("SELECT type FROM Gk_inventory;")
     types = mycursor.fetchall()
     types = list( dict.fromkeys(types))
-    print(types)
-    print("this is TYPE box stuff")
     for n in range(len(types)):
         n = (str(types[n])).replace("(","")
         f = n.replace(")","")
         b = f.replace(",","")
         q = b.replace("'","")
-        print(q)
-        #print(types[n])
         Type_Box.addItem(q)
 
-    print(shw)
-    #print(str(Attr_Box.currentText()))
-    #print(str(Type_Box.currentText()))
+    #Resets any negative values
+    upd =  "UPDATE Gk_inventory SET amount = 0 WHERE amount < 0"
+    mycursor.execute(upd)
+
+
+
 
 
 
@@ -95,25 +88,15 @@ def say_b(item_name, posneg, value):
     #Check for value initially
     mycursor.execute("SELECT * FROM Gk_inventory WHERE item_name = '" + item_name + "'")
     myresult = mycursor.fetchall()
-    #Only runs if given item already is in the inventory
-    if str(myresult) != "[]":
-        print("This item exists!")
-        mycursor.execute("SELECT amount FROM Gk_inventory WHERE item_name = '" + item_name + "'")
-        res_amnt = mycursor.fetchall()
-        #Converts current amount to string to remove from
-        am1 = str(res_amnt[0]).replace(")","")
-        am2 = am1.replace("(","")
-        am3 = am2.replace(",","")
-        print(res_amnt[0])
-        print(am3)
-        if (int(am3) - int(value)) >= 0:
-            upd = "UPDATE Gk_inventory SET amount = amount " + str(posneg) + " '" + str(value) + "'" + " WHERE item_name = '" + item_name + "'"
-            mycursor.execute(upd)
-        else: 
-            print("Negative Amount value!")
-    refr_table()
-    print(myresult)
+    mycursor.execute("SELECT amount FROM Gk_inventory WHERE item_name = '" + item_name + "'")
+    res_amnt = mycursor.fetchall()
+    print(res_amnt)
+    upd = "UPDATE Gk_inventory SET amount = amount " + str(posneg) + " '" + str(value) + "'" + " WHERE item_name = '" + item_name + "'"
+    mycursor.execute(upd)
     testdb.commit()
+    
+    refr_table()
+
 
 #Used to add new entries with new values to inventory
 def say_w(item_desc, price, amount, type):
@@ -121,11 +104,11 @@ def say_w(item_desc, price, amount, type):
     val = (0, item_desc, float(price), int(amount), type)
     mycursor.execute(add, val)
     refr_table()
-    print(cur_invn)
+
     testdb.commit()
 
 def s_box_check():
-    print("s_box_check works")
+
     if str(Attr_Box.currentText()) == "Type":
         Amnt_Box.setDisabled(True)
         Type_Box.setEnabled(True)
@@ -228,7 +211,6 @@ class inv_main(QMainWindow):
         super(inv_main,self).__init__()
 
         self.setWindowTitle("Inviti") 
-        self.setIcon("Inviti_icon.ico")
 
         #sets layout
         layout = QVBoxLayout()
@@ -284,16 +266,6 @@ class inv_main(QMainWindow):
 
         self.setCentralWidget(Base)
 
-
-#Ties search function to Query toggle
-
-
-
-   
-
-#Debug to check accuracy of python table
-print(cur_invn)
-print(valu_box.sizeHint)
 
 #draws the table and executes app
 refr_table()
